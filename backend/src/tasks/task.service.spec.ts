@@ -10,7 +10,8 @@ const mockTaskRepository = {
   create: jest.fn(),
   save: jest.fn(),
   find: jest.fn(),
-  getAllTask:jest.fn()
+  getAllTask:jest.fn(),
+  findOneBy: jest.fn(),
 };
 
 describe('TasksService', () => {
@@ -30,6 +31,18 @@ describe('TasksService', () => {
     service=module.get<TasksService>(TasksService);
     repository=module.get<Repository<Task>>(getRepositoryToken(Task));
   })
+  describe('getTaskById', () => {
+    it('debe lanzar NotFoundException si la tarea no existe', async () => {
+    
+      // 1. ARRANGE
+      const taskId = 'non-existent-id';
+      repository.findOneBy.mockResolvedValue(null) // Simulamos que no encuentra la tarea
+      
+      // 2. ACT & ASSERT
+      await expect(service.getTaskById(taskId)).rejects.toThrow(`Task with ID "${taskId}" not found`);
+
+
+    })  });
 
   describe('getAllTasks', () => {
     it('debe retornar un array de tareas', async () => {
@@ -44,6 +57,25 @@ describe('TasksService', () => {
       // 3. ASSERT
       expect(tasks).toEqual(result); // ¿Devolvió lo que el repo le dio?
       expect(repository.find).toHaveBeenCalled(); // ¿Llamó al repo?
+    });
+  });
+
+  describe('createTask', () => {
+    it('debe crear y guardar una nueva tarea', async () => {
+      // 1. ARRANGE
+      const createTaskDto = { title: 'New Task', description: 'Task description' };
+      const savedTask = { id: 'some-uuid-string', ...createTaskDto };
+      // Mockeamos el comportamiento del repo para crear y guardar
+      repository.create.mockReturnValue(savedTask); // Cuando se llame a create, devuelve savedTask
+      repository.save.mockResolvedValue(savedTask); // Cuando se llame a save, devuelve savedTask
+
+      // 2. ACT
+      const result = await service.createTask(createTaskDto);
+
+      // 3. ASSERT
+      expect(repository.create).toHaveBeenCalledWith(createTaskDto); // ¿Llamó a create con el DTO correcto?
+      expect(repository.save).toHaveBeenCalledWith(savedTask); // ¿Llamó a save con el resultado de create?
+      expect(result).toEqual(savedTask); // ¿Devolvió lo que save devolvió?
     });
   });
 
