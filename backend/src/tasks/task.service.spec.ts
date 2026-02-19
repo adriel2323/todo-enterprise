@@ -3,9 +3,17 @@ import { TasksService } from './tasks.service';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Task } from './task.entity';
 import { Repository } from 'typeorm';
+import { create } from 'domain';
 
 // 1. Creamos un mock (una simulación) del Repo de Task
 // Esto es como crear un "trozo" de Repo que solo responde a las funciones que necesitamos para nuestros tests
+
+const mockQueryBuilder = {
+  skip: jest.fn().mockReturnThis(),
+  take: jest.fn().mockReturnThis(),
+  getMany: jest.fn(), // Le sacamos el mockResolvedValue fijo
+};
+
 const mockTaskRepository = {
   create: jest.fn(),
   save: jest.fn(),
@@ -14,6 +22,7 @@ const mockTaskRepository = {
   findOneBy: jest.fn(),
   softDelete: jest.fn(),
   update: jest.fn(),
+  createQueryBuilder: jest.fn().mockReturnValue(mockQueryBuilder), // Cuando se llame a createQueryBuilder, devuelve nuestro mockQueryBuilder
 };
 
 describe('TasksService', () => {
@@ -49,16 +58,26 @@ describe('TasksService', () => {
   describe('getAllTasks', () => {
     it('debe retornar un array de tareas', async () => {
       // 1. ARRANGE
-      const result = [{ title: 'Test Task', status: 'OPEN' }]; 
+      const getTaskFilterDto= {  limit: 3, page: 1 };
+      const result = [
+        { id: '1', title: 'Task 1', description: 'Description 1' },
+        { id: '2', title: 'Task 2', description: 'Description 2' },
+        { id: '3', title: 'Task 2', description: 'Description 2' },
+      ];
+
       // Le enseñamos al mock a devolver esa promesa resuelta
-      repository.find.mockResolvedValue(result);
+      repository.createQueryBuilder(getTaskFilterDto).getMany.mockResolvedValue(result); // Simulamos que devuelve el resultado esperado
 
       // 2. ACT
-      const tasks = await service.getAllTasks();
+      const tasks = await service.getAllTasks( getTaskFilterDto);
 
       // 3. ASSERT
-      expect(tasks).toEqual(result); // ¿Devolvió lo que el repo le dio?
-      expect(repository.find).toHaveBeenCalled(); // ¿Llamó al repo?
+      expect(repository.createQueryBuilder).toHaveBeenCalledWith(getTaskFilterDto); // ¿Llamó a find con el filtro correcto?
+      
+      //(page && limit ? (page - 1) * limit : 0)
+      expect(mockQueryBuilder.skip).toHaveBeenCalledWith(0); // ¿Llamó a skip con el valor correcto?
+      expect(mockQueryBuilder.take).toHaveBeenCalledWith(3); // ¿Llamó a take con el valor correcto?  
+      expect(tasks).toEqual(result); // ¿Devolvió lo que el repo devolvió?
     });
   });
 

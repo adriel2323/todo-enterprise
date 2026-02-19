@@ -1,25 +1,30 @@
-import { Controller, Post, Get, Body, Param, NotFoundException, Delete} from '@nestjs/common';
+import { Controller, Post, Get, Body, Param, NotFoundException, Delete, Query} from '@nestjs/common';
 import { TasksService } from './tasks.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { Task } from './task.entity';
-import { get } from 'http';
+import { GetTaskFilterDto } from './dto/get-task-filter.dto';
+import { ApiOperation, ApiProperty, ApiQuery, ApiResponse } from '@nestjs/swagger';
 
 @Controller('tasks')
 export class TasksController {
     constructor(private tasksService: TasksService){}
 
     @Get()
-    getAllTasks(): Promise<Task[]>{
-        return this.tasksService.getAllTasks();
+    getAllTasks( @Query() getTaskFilterDto: GetTaskFilterDto): Promise<Task[]>{
+        return this.tasksService.getAllTasks(getTaskFilterDto);
     }
-    
 
     @Get('/deleted')
+    @ApiOperation({ summary: 'Get all deleted tasks' })
+    @ApiResponse({ status: 200, description: 'List of deleted tasks', type: [Task] })
     getTasksDeleted(): Promise<Task[]>{
         return this.tasksService.getTasksDeleted();
     }
     
     @Get('/:id')
+    @ApiOperation({ summary: 'Get a task by ID' })
+    @ApiResponse({ status: 200, description: 'The found task', type: Task })
+    @ApiResponse({ status: 404, description: 'Task not found' })
     getTaskById(@Param('id') id: string): Promise<Task>{
 
         const task= this.tasksService.getTaskById(id);
@@ -31,11 +36,16 @@ export class TasksController {
     }
 
     @Post()
+    @ApiOperation({ summary: 'Create a new task' })
+    @ApiResponse({ status: 201, description: 'The task has been successfully created.', type: Task })
     createTask(@Body() createTaskDto: CreateTaskDto): Promise<Task>{
         return this.tasksService.createTask(createTaskDto);
     }
 
     @Delete('/:id')
+    @ApiOperation({ summary: 'Delete a task by ID' })
+    @ApiResponse({ status: 204, description: 'The task has been successfully deleted.' })
+    @ApiResponse({ status: 404, description: 'Task not found' })
     deleteTask(@Param('id') id: string): Promise<void>{
         return this.tasksService.deleteTask(id);
     }

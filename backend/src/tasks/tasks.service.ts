@@ -4,6 +4,8 @@ import { IsNull, Not, Repository } from 'typeorm';
 import { Task } from './task.entity';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { TaskStatus } from './task.status.enum';
+import { ApiProperty } from '@nestjs/swagger';
+import { GetTaskFilterDto } from './dto/get-task-filter.dto';
 
 
 @Injectable()
@@ -31,8 +33,21 @@ export class TasksService {
         return await this.taskRepository.save(task);
     }
 
-    async getAllTasks(): Promise<Task[]>{
-        return await this.taskRepository.find();
+    async getAllTasks( getTaskFilter: GetTaskFilterDto ): Promise<Task[]>{
+
+        const { limit, page } = getTaskFilter;
+        const query = this.taskRepository.createQueryBuilder('task');
+        if (page !== undefined) {
+            query.skip(page && limit ? (page - 1) * limit : 0);
+        } 
+        if (limit) {
+            query.take(limit);
+        }else {
+            query.take(10);
+        }
+        return await query.getMany();
+        
+        //return await this.taskRepository.find();
     }
 
     async deleteTask(id:string): Promise<void>{
