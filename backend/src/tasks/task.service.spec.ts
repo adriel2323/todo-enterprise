@@ -12,6 +12,8 @@ const mockTaskRepository = {
   find: jest.fn(),
   getAllTask:jest.fn(),
   findOneBy: jest.fn(),
+  softDelete: jest.fn(),
+  update: jest.fn(),
 };
 
 describe('TasksService', () => {
@@ -76,6 +78,33 @@ describe('TasksService', () => {
       expect(repository.create).toHaveBeenCalledWith(createTaskDto); // ¿Llamó a create con el DTO correcto?
       expect(repository.save).toHaveBeenCalledWith(savedTask); // ¿Llamó a save con el resultado de create?
       expect(result).toEqual(savedTask); // ¿Devolvió lo que save devolvió?
+    });
+  });
+
+  describe('deleteTask', () => {
+
+    it('must throw NotFoundException if task to delete does not exist', async ( ) => {
+      //1.ARRANGE
+      const taskId= 'non-existent-id';
+      repository.softDelete.mockResolvedValue({ affected: 0 });
+      
+      //2.ACT & ASSERT
+      await expect(service.deleteTask(taskId)).rejects.toThrow(`Task with ID "${taskId}" not found`);
+      expect(repository.softDelete).toHaveBeenCalledWith(taskId);
+    });
+
+    it('must delete a task', async ( ) => {
+      //1.ARRANGE
+      const taskId= 'some-uuid-string';
+      repository.softDelete.mockResolvedValue({ affected: 1 });
+
+      //2.ACT
+      const result= await service.deleteTask(taskId);
+
+      //3.ASSERT
+      expect(repository.softDelete).toHaveBeenCalledWith(taskId);
+      expect(result).toBeUndefined();
+
     });
   });
 

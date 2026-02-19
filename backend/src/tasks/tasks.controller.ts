@@ -2,10 +2,17 @@ import { Controller, Post, Get, Body, Param, NotFoundException, Delete} from '@n
 import { TasksService } from './tasks.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { Task } from './task.entity';
+import { get } from 'http';
 
 @Controller('tasks')
 export class TasksController {
     constructor(private tasksService: TasksService){}
+
+    @Get()
+    getAllTasks(): Promise<Task[]>{
+        return this.tasksService.getAllTasks();
+    }
+    
 
     @Get('/deleted')
     getTasksDeleted(): Promise<Task[]>{
