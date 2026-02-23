@@ -1,4 +1,24 @@
 services:
+  app:
+    # Construye la imagen usando el Dockerfile que creamos antes
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      # Sincroniza tu código de WSL con el contenedor
+      - .:/usr/src/app
+      # Volumen anónimo para node_modules (evita conflictos entre tu host y el contenedor)
+      - node_modules:/usr/src/app/node_modules
+    ports:
+      - "3000:3000"
+    # Carga las mismas variables de entorno (útil para que Node sepa cómo conectarse)
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+    # Mantiene el contenedor vivo para que VS Code pueda conectarse
+    command: sleep infinity
+
   postgres:
     image: postgres:15-alpine
     ports:
@@ -9,6 +29,9 @@ services:
       POSTGRES_DB: ${DB_NAME}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    env_file:
+      - .env
 
 volumes:
   postgres_data:
+  node_modules:
