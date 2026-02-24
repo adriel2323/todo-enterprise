@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
+import { Body, Controller, Post } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AuthCredentialsDto } from './dto/auth-credentials.dto';
 import { ApiOperation, ApiResponse } from '@nestjs/swagger';
@@ -15,14 +15,13 @@ export class AuthController {
     return this.authService.singUp(AuthCredentialsDto);
   }
 
-  @Get('/users')
-  @ApiOperation({ summary: 'Get all registered users' })
-  @ApiResponse({
-    status: 200,
-    description: 'List of registered users',
-    type: [AuthCredentialsDto],
-  })
-  getAllUsers(): Promise<AuthCredentialsDto[]> {
-    return this.authService.getAllUsers();
+  @Post('/signIn')
+  @ApiOperation({ summary: 'Authenticate a user and return a JWT token' })
+  @ApiResponse({ status: 201, description: 'User successfully authenticated' })
+  @ApiResponse({ status: 401, description: 'Invalid credentials' })
+  async signIn(
+    @Body() AuthCredentialsDto: AuthCredentialsDto,
+  ): Promise<{ accessToken: string }> {
+    return this.authService.signIn(AuthCredentialsDto);
   }
 }

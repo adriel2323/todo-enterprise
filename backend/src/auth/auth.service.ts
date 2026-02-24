@@ -2,18 +2,21 @@ import {
   ConflictException,
   Injectable,
   InternalServerErrorException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './auth.entity';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { AuthCredentialsDto } from './dto/auth-credentials.dto';
+import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class AuthService {
   constructor(
     @InjectRepository(User)
     private userRepository: Repository<User>,
+    private jwtService: JwtService,
   ) {}
 
   async singUp(authCredentialsDto: AuthCredentialsDto): Promise<void> {
@@ -39,11 +42,18 @@ export class AuthService {
     }
   }
 
-  async getAllUsers(): Promise<AuthCredentialsDto[]> {
-    const users = await this.userRepository.find();
-    return users.map((user) => ({
-      email: user.email,
-      password: user.password,
-    }));
+  async signIn(
+    authCredentialsDto: AuthCredentialsDto,
+  ): Promise<{ accessToken: string }> {
+    const { email, password } = authCredentialsDto;
+
+    const user = await this.userRepository.findOne({ where: { email } });
+    if (user && (await bcrypt.compare(password, user.password))) {
+      const payload = { email };
+      const accessToken = this.jwtService.sign(payload);
+      return { accessToken };
+    } else {
+      throw new UnauthorizedException('Please check your login credentials');
+    }
   }
 }

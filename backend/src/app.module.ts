@@ -8,7 +8,7 @@ import { AuthModule } from './auth/auth.module';
   imports: [
     ConfigModule.forRoot({
       envFilePath: '../.env',
-      isGlobal:true,
+      isGlobal: true,
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
@@ -32,6 +32,5 @@ import { AuthModule } from './auth/auth.module';
   ],
   controllers: [],
   providers: [],
-
 })
 export class AppModule {}
