@@ -23,13 +23,17 @@ export class TasksService {
     return task;
   }
 
-  async createTask(CreateTaskDto: CreateTaskDto, user: User): Promise<Task> {
-    const { title, description } = CreateTaskDto;
+  async createTask(createTaskDto: CreateTaskDto, user: User): Promise<Task> {
+    const { title, description } = createTaskDto;
+
     const task = this.taskRepository.create({
       title,
       description,
       user,
     });
+
+    // Guardamos y retornamos la entidad completa.
+    // TypeScript está feliz porque 'save' devuelve un 'Task' válido.
     return await this.taskRepository.save(task);
   }
 

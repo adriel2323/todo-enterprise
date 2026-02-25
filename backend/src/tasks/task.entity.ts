@@ -10,6 +10,7 @@ import {
 import { TaskStatus } from './task.status.enum';
 import { ApiProperty } from '@nestjs/swagger';
 import { User } from '../auth/user.entity';
+import { Exclude } from 'class-transformer';
 
 @Entity()
 export class Task {
@@ -74,6 +75,7 @@ export class Task {
   deletedAt: Date;
 
   @ManyToOne(() => User, (user) => user.tasks, { eager: false })
+  @Exclude({ toPlainOnly: true })
   user: User;
 
   //   @Column()

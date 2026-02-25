@@ -8,6 +8,8 @@ import {
   Delete,
   Query,
   UseGuards,
+  UseInterceptors,
+  ClassSerializerInterceptor,
 } from '@nestjs/common';
 import { TasksService } from './tasks.service';
 import { CreateTaskDto } from './dto/create-task.dto';
@@ -20,6 +22,7 @@ import { GetUser } from '../auth/get-user.decorator';
 @Controller('tasks')
 //Declarar que todas las rutas de este controlador requieren autenticación JWT(error fantasma por valor default de NestJS)
 @UseGuards(AuthGuard('jwt'))
+@UseInterceptors(ClassSerializerInterceptor)
 export class TasksController {
   constructor(private tasksService: TasksService) {}
 
