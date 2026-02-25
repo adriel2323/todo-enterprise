@@ -18,6 +18,7 @@ import { GetTaskFilterDto } from './dto/get-task-filter.dto';
 import { ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { GetUser } from '../auth/get-user.decorator';
+import { User } from '../auth/user.entity';
 
 @Controller('tasks')
 //Declarar que todas las rutas de este controlador requieren autenticación JWT(error fantasma por valor default de NestJS)
@@ -27,8 +28,17 @@ export class TasksController {
   constructor(private tasksService: TasksService) {}
 
   @Get()
-  getAllTasks(@Query() getTaskFilterDto: GetTaskFilterDto): Promise<Task[]> {
-    return this.tasksService.getAllTasks(getTaskFilterDto);
+  @ApiOperation({ summary: 'Get all tasks with pagination' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of tasks with pagination',
+    type: [Task],
+  })
+  getAllTasks(
+    @Query() getTaskFilterDto: GetTaskFilterDto,
+    @GetUser() user: User,
+  ): Promise<Task[]> {
+    return this.tasksService.getAllTasks(getTaskFilterDto, user);
   }
 
   @Get('/deleted')
@@ -46,8 +56,8 @@ export class TasksController {
   @ApiOperation({ summary: 'Get a task by ID' })
   @ApiResponse({ status: 200, description: 'The found task', type: Task })
   @ApiResponse({ status: 404, description: 'Task not found' })
-  getTaskById(@Param('id') id: string): Promise<Task> {
-    const task = this.tasksService.getTaskById(id);
+  getTaskById(@Param('id') id: string, @GetUser() user: User): Promise<Task> {
+    const task = this.tasksService.getTaskById(id, user);
     // eslint-disable-next-line @typescript-eslint/no-misused-promises
     if (!task) {
       throw new NotFoundException(`Task with ID "${id}" not found`);
@@ -64,9 +74,8 @@ export class TasksController {
   })
   createTask(
     @Body() createTaskDto: CreateTaskDto,
-    @GetUser() user,
+    @GetUser() user: User,
   ): Promise<Task> {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     return this.tasksService.createTask(createTaskDto, user);
   }
 
@@ -77,7 +86,7 @@ export class TasksController {
     description: 'The task has been successfully deleted.',
   })
   @ApiResponse({ status: 404, description: 'Task not found' })
-  deleteTask(@Param('id') id: string): Promise<void> {
-    return this.tasksService.deleteTask(id);
+  deleteTask(@Param('id') id: string, @GetUser() user: User): Promise<void> {
+    return this.tasksService.deleteTask(id, user);
   }
 }

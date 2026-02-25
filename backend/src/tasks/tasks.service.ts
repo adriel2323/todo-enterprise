@@ -15,8 +15,11 @@ export class TasksService {
     private taskRepository: Repository<Task>,
   ) {}
 
-  async getTaskById(id: string): Promise<Task> {
-    const task = await this.taskRepository.findOneBy({ id });
+  async getTaskById(id: string, user: User): Promise<Task> {
+    const task = await this.taskRepository.findOneBy({
+      id,
+      user: { id: user.id },
+    });
     if (!task) {
       throw new NotFoundException(`Task with ID "${id}" not found`);
     }
@@ -37,9 +40,13 @@ export class TasksService {
     return await this.taskRepository.save(task);
   }
 
-  async getAllTasks(getTaskFilter: GetTaskFilterDto): Promise<Task[]> {
+  async getAllTasks(
+    getTaskFilter: GetTaskFilterDto,
+    user: User,
+  ): Promise<Task[]> {
     const { limit, page } = getTaskFilter;
     const query = this.taskRepository.createQueryBuilder('task');
+    query.where('task.user.id = :userId', { userId: user.id });
     if (page !== undefined) {
       query.skip(page && limit ? (page - 1) * limit : 0);
     }
@@ -53,7 +60,12 @@ export class TasksService {
     //return await this.taskRepository.find();
   }
 
-  async deleteTask(id: string): Promise<void> {
+  async deleteTask(id: string, user: User): Promise<void> {
+    console.log('Deleting task with ID:', id, 'for user:', user.id);
+    const task = await this.getTaskById(id, user);
+    if (!task) {
+      throw new NotFoundException(`Task with ID "${id}" not found`);
+    }
     const result = await this.taskRepository.softDelete(id);
     if (result.affected === 0) {
       throw new NotFoundException(`Task with ID "${id}" not found`);
