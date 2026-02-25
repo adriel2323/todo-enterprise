@@ -1,6 +1,15 @@
-import { Column, Entity, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, DeleteDateColumn } from "typeorm";
-import { TaskStatus } from "./task.status.enum";
-import { ApiProperty } from "@nestjs/swagger";
+import {
+  Column,
+  Entity,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+  DeleteDateColumn,
+  ManyToOne,
+} from 'typeorm';
+import { TaskStatus } from './task.status.enum';
+import { ApiProperty } from '@nestjs/swagger';
+import { User } from '../auth/user.entity';
 
 @Entity()
 export class Task {
@@ -42,19 +51,17 @@ export class Task {
   @ApiProperty({
     description: 'The date and time when the task was created',
     example: '2024-06-01T12:00:00Z',
-  })  
+  })
   @CreateDateColumn()
   createdAt: Date;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'The date and time when the task was last updated',
     example: '2024-06-02T15:30:00Z',
   })
-  @UpdateDateColumn(
-    {
-        nullable: true,
-    }
-  )
+  @UpdateDateColumn({
+    nullable: true,
+  })
   updatedAt: Date;
 
   @ApiProperty({
@@ -66,7 +73,9 @@ export class Task {
   })
   deletedAt: Date;
 
-//   @Column()
-//   userId: string;
+  @ManyToOne(() => User, (user) => user.tasks, { eager: false })
+  user: User;
 
+  //   @Column()
+  //   userId: string;
 }

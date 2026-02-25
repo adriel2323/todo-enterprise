@@ -15,8 +15,10 @@ import { Task } from './task.entity';
 import { GetTaskFilterDto } from './dto/get-task-filter.dto';
 import { ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
+import { GetUser } from '../auth/get-user.decorator';
 
 @Controller('tasks')
+//Declarar que todas las rutas de este controlador requieren autenticación JWT(error fantasma por valor default de NestJS)
 @UseGuards(AuthGuard('jwt'))
 export class TasksController {
   constructor(private tasksService: TasksService) {}
@@ -57,8 +59,12 @@ export class TasksController {
     description: 'The task has been successfully created.',
     type: Task,
   })
-  createTask(@Body() createTaskDto: CreateTaskDto): Promise<Task> {
-    return this.tasksService.createTask(createTaskDto);
+  createTask(
+    @Body() createTaskDto: CreateTaskDto,
+    @GetUser() user,
+  ): Promise<Task> {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+    return this.tasksService.createTask(createTaskDto, user);
   }
 
   @Delete('/:id')
