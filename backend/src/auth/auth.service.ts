@@ -19,7 +19,7 @@ export class AuthService {
     private jwtService: JwtService,
   ) {}
 
-  async singUp(authCredentialsDto: AuthCredentialsDto): Promise<void> {
+  async signUp(authCredentialsDto: AuthCredentialsDto): Promise<void> {
     const { email, password } = authCredentialsDto;
 
     const salt = await bcrypt.genSalt();

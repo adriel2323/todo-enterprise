@@ -11,8 +11,8 @@ export class AuthController {
   @ApiOperation({ summary: 'Register a new user' })
   @ApiResponse({ status: 201, description: 'User successfully registered' })
   @ApiResponse({ status: 409, description: 'Email already exists' })
-  async signUp(@Body() AuthCredentialsDto: AuthCredentialsDto): Promise<void> {
-    return this.authService.singUp(AuthCredentialsDto);
+  async signUp(@Body() authCredentialsDto: AuthCredentialsDto): Promise<void> {
+    return this.authService.signUp(authCredentialsDto);
   }
 
   @Post('/signIn')
@@ -20,8 +20,8 @@ export class AuthController {
   @ApiResponse({ status: 201, description: 'User successfully authenticated' })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
   async signIn(
-    @Body() AuthCredentialsDto: AuthCredentialsDto,
+    @Body() authCredentialsDto: AuthCredentialsDto,
   ): Promise<{ accessToken: string }> {
-    return this.authService.signIn(AuthCredentialsDto);
+    return this.authService.signIn(authCredentialsDto);
   }
 }

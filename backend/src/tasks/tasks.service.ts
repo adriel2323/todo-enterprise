@@ -7,6 +7,7 @@ import { User } from '../auth/user.entity';
 // import { TaskStatus } from './task.status.enum';
 // import { ApiProperty } from '@nestjs/swagger';
 import { GetTaskFilterDto } from './dto/get-task-filter.dto';
+import { TaskStatus } from './task.status.enum';
 
 @Injectable()
 export class TasksService {
@@ -46,7 +47,7 @@ export class TasksService {
   ): Promise<Task[]> {
     const { limit, page } = getTaskFilter;
     const query = this.taskRepository.createQueryBuilder('task');
-    query.where('task.user.id = :userId', { userId: user.id });
+    query.where('task.userId = :userId', { userId: user.id });
     if (page !== undefined) {
       query.skip(page && limit ? (page - 1) * limit : 0);
     }
@@ -61,7 +62,6 @@ export class TasksService {
   }
 
   async deleteTask(id: string, user: User): Promise<void> {
-    console.log('Deleting task with ID:', id, 'for user:', user.id);
     const task = await this.getTaskById(id, user);
     if (!task) {
       throw new NotFoundException(`Task with ID "${id}" not found`);
@@ -80,5 +80,18 @@ export class TasksService {
         deletedAt: Not(IsNull()),
       },
     });
+  }
+
+  async updateTaskStatus(
+    id: string,
+    status: TaskStatus,
+    user: User,
+  ): Promise<Task> {
+    const task = await this.getTaskById(id, user);
+    if (!task) {
+      throw new NotFoundException(`Task with ID "${id}" not found`);
+    }
+    task.status = status;
+    return await this.taskRepository.save(task);
   }
 }

@@ -1,30 +1,38 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
 import { Test, TestingModule } from '@nestjs/testing';
 import { TasksService } from './tasks.service';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Task } from './task.entity';
 import { Repository } from 'typeorm';
 
-// 1. Creamos un mock (una simulación) del Repo de Task
-// Esto es como crear un "trozo" de Repo que solo responde a las funciones que necesitamos para nuestros tests
-
-const mockQueryBuilder = {
-  skip: jest.fn().mockReturnThis(),
-  take: jest.fn().mockReturnThis(),
-  getMany: jest.fn(), // Le sacamos el mockResolvedValue fijo
-};
-
-const mockTaskRepository = {
-  create: jest.fn(),
-  save: jest.fn(),
-  find: jest.fn(),
-  getAllTask: jest.fn(),
-  findOneBy: jest.fn(),
-  softDelete: jest.fn(),
-  update: jest.fn(),
-  createQueryBuilder: jest.fn().mockReturnValue(mockQueryBuilder), // Cuando se llame a createQueryBuilder, devuelve nuestro mockQueryBuilder
-};
-
 describe('TasksService', () => {
+  const mockQueryBuilder = {
+    skip: jest.fn().mockReturnThis(),
+    take: jest.fn().mockReturnThis(),
+    getMany: jest.fn(),
+    where: jest.fn().mockReturnThis(),
+  };
+
+  const mockUser = {
+    id: 'user-id-123',
+    email: 'test@example.com',
+    password: 'someHashedPassword',
+    tasks: [],
+  };
+
+  const mockTaskRepository = () => ({
+    create: jest.fn(),
+    save: jest.fn(),
+    find: jest.fn(),
+    getAllTask: jest.fn(),
+    findOneBy: jest.fn(),
+    findOne: jest.fn(),
+    softDelete: jest.fn(),
+    update: jest.fn(),
+    createQueryBuilder: jest.fn().mockReturnValue(mockQueryBuilder),
+  });
+
   let service: TasksService;
   let repository;
   beforeEach(async () => {
@@ -34,7 +42,7 @@ describe('TasksService', () => {
         TasksService,
         {
           provide: getRepositoryToken(Task), // Cuando alguien pida el Repo de Task...
-          useValue: mockTaskRepository, //... le damos un mock (una simulación) de ese Repo
+          useFactory: mockTaskRepository, //... le damos un mock (una simulación) de ese Repo
         },
       ],
     }).compile();
@@ -42,15 +50,26 @@ describe('TasksService', () => {
     repository = module.get<Repository<Task>>(getRepositoryToken(Task));
   });
   describe('getTaskById', () => {
-    it('debe lanzar NotFoundException si la tarea no existe', async () => {
+    it('debe retornar una tarea si existe y le pertenece al usuario', async () => {
       // 1. ARRANGE
+      const mockTask = {
+        id: 'some-id',
+        title: 'Test',
+        description: 'Test desc',
+      };
       const taskId = 'non-existent-id';
-      repository.findOneBy.mockResolvedValue(null); // Simulamos que no encuentra la tarea
+
+      repository.findOneBy.mockResolvedValue(mockTask);
 
       // 2. ACT & ASSERT
-      await expect(service.getTaskById(taskId)).rejects.toThrow(
-        `Task with ID "${taskId}" not found`,
-      );
+      const result = await service.getTaskById(taskId, mockUser);
+
+      //3 ASSERT
+      expect(repository.findOneBy).toHaveBeenCalledWith({
+        id: taskId,
+        user: { id: mockUser.id },
+      });
+      expect(result).toEqual(mockTask); // ¿Devolvió lo que el repo devolvió?
     });
   });
 
@@ -65,21 +84,22 @@ describe('TasksService', () => {
       ];
 
       // Le enseñamos al mock a devolver esa promesa resuelta
-      repository
-        .createQueryBuilder(getTaskFilterDto)
-        .getMany.mockResolvedValue(result); // Simulamos que devuelve el resultado esperado
+      mockQueryBuilder.getMany.mockResolvedValue(result); // Simulamos que devuelve el resultado esperado
 
       // 2. ACT
-      const tasks = await service.getAllTasks(getTaskFilterDto);
+      const tasks = await service.getAllTasks(getTaskFilterDto, mockUser);
 
       // 3. ASSERT
-      expect(repository.createQueryBuilder).toHaveBeenCalledWith(
-        getTaskFilterDto,
-      ); // ¿Llamó a find con el filtro correcto?
+      expect(repository.createQueryBuilder).toHaveBeenCalledWith('task');
 
+      expect(mockQueryBuilder.where).toHaveBeenCalledWith(
+        'task.userId = :userId',
+        { userId: mockUser.id },
+      );
       //(page && limit ? (page - 1) * limit : 0)
-      expect(mockQueryBuilder.skip).toHaveBeenCalledWith(0); // ¿Llamó a skip con el valor correcto?
-      expect(mockQueryBuilder.take).toHaveBeenCalledWith(3); // ¿Llamó a take con el valor correcto?
+      expect(mockQueryBuilder.skip).toHaveBeenCalledWith(0);
+      expect(mockQueryBuilder.take).toHaveBeenCalledWith(3);
+
       expect(tasks).toEqual(result); // ¿Devolvió lo que el repo devolvió?
     });
   });
@@ -91,50 +111,56 @@ describe('TasksService', () => {
         title: 'New Task',
         description: 'Task description',
       };
-      const savedTask = { id: 'some-uuid-string', ...createTaskDto };
+
+      const savedTask = {
+        id: 'some-uuid-string',
+        ...createTaskDto,
+        user: mockUser,
+      };
       // Mockeamos el comportamiento del repo para crear y guardar
-      repository.create.mockReturnValue(savedTask); // Cuando se llame a create, devuelve savedTask
-      repository.save.mockResolvedValue(savedTask); // Cuando se llame a save, devuelve savedTask
+      repository.create.mockReturnValue(savedTask);
+      repository.save.mockResolvedValue(savedTask);
 
       // 2. ACT
-      const result = await service.createTask(createTaskDto);
+      const result = await service.createTask(createTaskDto, mockUser);
 
       // 3. ASSERT
-      expect(repository.create).toHaveBeenCalledWith(createTaskDto); // ¿Llamó a create con el DTO correcto?
-      expect(repository.save).toHaveBeenCalledWith(savedTask); // ¿Llamó a save con el resultado de create?
-      expect(result).toEqual(savedTask); // ¿Devolvió lo que save devolvió?
+      expect(repository.create).toHaveBeenCalledWith({
+        ...createTaskDto,
+        user: mockUser,
+      }); // ¿Llamó a create con el DTO correcto?
+      expect(repository.save).toHaveBeenCalledWith(savedTask);
+      expect(result).toEqual(savedTask);
     });
   });
 
   describe('deleteTask', () => {
-    it('must throw NotFoundException if task to delete does not exist', async () => {
-      //1.ARRANGE
-      const taskId = 'non-existent-id';
-      repository.softDelete.mockResolvedValue({ affected: 0 });
-
-      //2.ACT & ASSERT
-      await expect(service.deleteTask(taskId)).rejects.toThrow(
-        `Task with ID "${taskId}" not found`,
-      );
-      expect(repository.softDelete).toHaveBeenCalledWith(taskId);
-    });
-
-    it('must delete a task', async () => {
-      //1.ARRANGE
-      const taskId = 'some-uuid-string';
+    const taskId = 'non-existent-id';
+    it('must call getTaskById to check if the task exists', async () => {
+      //1. ARRANGE
+      repository.findOneBy.mockResolvedValue({
+        id: taskId,
+        tittle: 'Test Task',
+      });
       repository.softDelete.mockResolvedValue({ affected: 1 });
 
-      //2.ACT
-      const result = await service.deleteTask(taskId);
+      //2. ACT
+      const result = await service.deleteTask(taskId, mockUser);
 
-      //3.ASSERT
+      //3. ASSERT
       expect(repository.softDelete).toHaveBeenCalledWith(taskId);
       expect(result).toBeUndefined();
     });
-  });
 
-  // 3. Ahora probamos el Servicio en Isolación (sin dependencias externas)
-  it('should be defined', () => {
-    expect(service).toBeDefined();
+    it('must throw NotFoundException if task to delete does not exist', async () => {
+      //1.ARRANGE
+      repository.findOneBy.mockResolvedValue(null); // Simulamos que no encuentra la tarea
+
+      //2.ACT & ASSERT
+      await expect(service.deleteTask(taskId, mockUser)).rejects.toThrow(
+        `Task with ID "${taskId}" not found`,
+      );
+      expect(repository.softDelete).not.toHaveBeenCalled(); // No debería intentar eliminar si no encuentra la tarea
+    });
   });
 });

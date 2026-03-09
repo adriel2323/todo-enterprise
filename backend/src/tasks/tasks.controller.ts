@@ -10,6 +10,7 @@ import {
   UseGuards,
   UseInterceptors,
   ClassSerializerInterceptor,
+  Patch,
 } from '@nestjs/common';
 import { TasksService } from './tasks.service';
 import { CreateTaskDto } from './dto/create-task.dto';
@@ -19,6 +20,7 @@ import { ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { GetUser } from '../auth/get-user.decorator';
 import { User } from '../auth/user.entity';
+import { UpdateTaskStatusDto } from './dto/updateTaskStatus.dto';
 
 @Controller('tasks')
 //Declarar que todas las rutas de este controlador requieren autenticación JWT(error fantasma por valor default de NestJS)
@@ -88,5 +90,22 @@ export class TasksController {
   @ApiResponse({ status: 404, description: 'Task not found' })
   deleteTask(@Param('id') id: string, @GetUser() user: User): Promise<void> {
     return this.tasksService.deleteTask(id, user);
+  }
+
+  @Patch('/:id/status')
+  @ApiOperation({ summary: 'Update a task status by ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'The task status has been successfully updated.',
+    type: Task,
+  })
+  @ApiResponse({ status: 404, description: 'Task not found' })
+  updateTaskStatus(
+    @Param('id') id: string,
+    @Body() updateTaskStatusDto: UpdateTaskStatusDto,
+    @GetUser() user: User,
+  ): Promise<Task> {
+    const { status } = updateTaskStatusDto;
+    return this.tasksService.updateTaskStatus(id, status, user);
   }
 }
